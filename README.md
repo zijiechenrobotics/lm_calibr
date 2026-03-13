@@ -5,7 +5,7 @@
     , 
     Xiaowei Liu
     ,
-    Yong Xu
+    <a href="https://teacher.gdut.edu.cn/xuyong/zh_CN/index.htm">Yong Xu</a>
     ,
     <a href="https://snakehaihai.github.io/">Shenghai Yuan</a>
     ,
