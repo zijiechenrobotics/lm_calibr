@@ -1,0 +1,58 @@
+# Currently only supports livox_ros_driver/CustomMsg type
+lidar_topic: /livox/lidar
+encoder_topic: /joint_states
+
+# Skip the first few seconds of data to remove dynamic objects
+rosbag_skip: 10.0
+# If accumulated angle exceeds threshold
+# discard remaining data to prevent excessive point cloud
+angle_threshold: 12.57 # default 4 pi
+
+# Maximum number of LM optimization iterations
+max_iter: 50
+# Downsampling rate for raw point cloud
+downsample_size: 0.1
+# Initial size of voxel_map
+max_voxel_size: 1.0
+# Minimum range of the laser point
+min_range: 1.0
+# Maximum range of the laser poin
+max_range: 20.0
+# Number of layers in voxel_map = max_layer + 1
+max_layer: 2
+# Plane threshold for each layer of voxel_map
+eigen_threshold: [0.1, 0.1, 0.1]
+
+# for Omni LiDAR
+DH_type: 0
+init_extrinsic:
+  d_1: 0.05
+  a_1: 0.0
+  phi_1: 1.77079633 # 1.57079633 
+  theta_2: -1.77079633 # -1.57079633 
+  d_2: 0.0
+  a_2: 0.0
+  phi_2: 0.0
+
+bag_path:
+  - "/root/workspace/data/calib_mid360_s1.bag"
+  - "/root/workspace/data/calib_mid360_s2.bag"
+  - "/root/workspace/data/calib_mid360_s3.bag"
+  - "/root/workspace/data/calib_mid360_s4.bag"
+
+# # for Non-Omni LiDAR
+# DH_type: 1
+# init_extrinsic:
+#   d_1: 0.05
+#   a_1: 0.0
+#   phi_1: 1.57079633
+#   theta_2: 0.2 # 0.0
+#   d_2: 0.0
+#   a_2: 0.0
+#   phi_2: -0.2 # 0.0
+
+# bag_path:
+#   - "/root/workspace/data/calib_avia_s1.bag"
+#   - "/root/workspace/data/calib_avia_s2.bag"
+#   - "/root/workspace/data/calib_avia_s3.bag"
+#   - "/root/workspace/data/calib_avia_s4.bag"

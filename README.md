@@ -35,15 +35,44 @@
 
 ## 📃 Abstract
 
-Accurate calibration and robust localization are fundamental for downstream tasks in spinning actuated LiDAR applications. Existing methods, however, require parameterizing extrinsic parameters based on different mounting configurations, limiting their generalizability. Additionally, spinning actuated LiDAR inevitably scans featureless regions,  which complicates the balance between scan coverage and localization robustness. To address these challenges, this letter presents a targetless LiDAR-motor calibration (LM-Calibr) on the basis of the Denavit-Hartenberg convention and an environmental adaptive LiDAR-inertial odometry (EVA-LIO). **LM-Calibr supports calibration of LiDAR-motor systems with various mounting configurations.** Extensive experiments demonstrate its accuracy and convergence across different scenarios, mounting angles, and initial values. Additionally, **EVA-LIO adaptively selects downsample rates and map resolutions according to spatial scale**. This adaptivity enables the actuator to operate at maximum speed, thereby enhancing scan completeness while ensuring robust localization, even when LiDAR briefly scans featureless areas.
+Accurate calibration and robust localization are fundamental for downstream tasks in spinning actuated LiDAR applications. Existing methods, however, require parameterizing extrinsic parameters based on different mounting configurations, limiting their generalizability. Additionally, spinning actuated LiDAR inevitably scans featureless regions, which complicates the balance between scan coverage and localization robustness. To address these challenges, this letter presents a targetless LiDAR-motor calibration (LM-Calibr) on the basis of the Denavit-Hartenberg convention and an environmental adaptive LiDAR-inertial odometry (EVA-LIO). **LM-Calibr supports calibration of LiDAR-motor systems with various mounting configurations.** Extensive experiments demonstrate its accuracy and convergence across different scenarios, mounting angles, and initial values. Additionally, **EVA-LIO adaptively selects downsample rates and map resolutions according to spatial scale**. This adaptivity enables the actuator to operate at maximum speed, thereby enhancing scan completeness while ensuring robust localization, even when LiDAR briefly scans featureless areas.
 
 ![framework](figures/framework.png)
+
+**Calibration Performance**
+
+LM-Calibr maintains robust convergence and high accuracy even under high-error conditions (up to 0.2 rad in angle and 0.2 m in translation). Furthermore, it supports the calibration of all LiDAR-Motor configurations.
+
+![framework](figures/calibration_result.jpg)
+
+**Localization Performance**
+
+EVA-LIO achieves high localization accuracy while maintaining computational efficiency and low memory consumption.
+
+![framework](figures/localization_performance.png)
 
 ## 📦 Setup
 
 ### Build from Docker
 
-(TODO)
+```bash
+cd <your workspace>
+git clone https://github.com/zijiechenrobotics/lm_calibr.git
+cd lm_calibr
+
+# build docker
+docker compose build
+# create docker
+docker compose up -d
+# enter docker
+sudo chmod 777 ./enter_docker.sh
+./enter_docker.sh
+# build
+catkin_make
+
+# stop docker
+docker compose down
+```
 
 ### Build from Source
 
@@ -53,17 +82,18 @@ Prerequisites
 * ROS
 * gcc & g++ >= 9
 
-(TODO)
+```bash
+cd <your workspace>
+git clone https://github.com/zijiechenrobotics/lm_calibr.git
+cd lm_calibr
+
+catkin_make
+```
 
 ## 🚀 Run
 
-### LM-Calibr
-
-(TODO)
-
-### EVA-LIO
-
-(TODO)
+* [LM-Calibr Guide](lm_calibr_guide.md)
+* EVA-LIO Guide (TODO)
 
 ## 🔧 Hardware Design
 

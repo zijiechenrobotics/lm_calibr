@@ -35,7 +35,8 @@ RUN apt-get update && \
     wget \
     psmisc \
     inxi \
-    pip
+    pip \
+    pcl-tools
 
 # livox sdk1
 COPY ./docker/Livox-SDK /root/software/Livox-SDK

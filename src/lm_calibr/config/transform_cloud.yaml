@@ -1,0 +1,35 @@
+lidar_topic: "/livox/lidar"
+encoder_topic: "/joint_states"
+
+# true_encoder_time = encoder_time + time_offset
+time_offset: 0.0
+
+# for mid360
+# DH_type: 0
+# # extrinsic:
+# #   d_1: 0.5
+# #   a_1: 0.0005502169587574704
+# #   phi_1: 1.578817100418992
+# #   theta_2: -1.546202631599734
+# #   d_2: 0.03538389784344098
+# #   a_2: 0.0
+# #   phi_2: 0.0
+# extrinsic:
+#   d_1: 0.0
+#   a_1: -5.22741364616127e-05
+#   phi_1: 1.5850991426962153
+#   theta_2: -1.5451560267056077
+#   d_2: 0.03184866096266027
+#   a_2: 0.0
+#   phi_2: 0.0
+
+# for Non-Omni LiDAR
+DH_type: 1
+extrinsic:
+  d_1: 0.05
+  a_1: 0
+  phi_1: 1.57079633
+  theta_2: -0.002645289235848494
+  d_2: 0.0001847859009746622
+  a_2: 0.03370932638818411
+  phi_2: -0.00943702929342231
