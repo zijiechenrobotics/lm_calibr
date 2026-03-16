@@ -3,7 +3,7 @@
   <p align="center">
     <a href="https://github.com/zijiechenrobotics">Zijie Chen</a>
     , 
-    Xiaowei Liu
+    <a href="https://github.com/xiaoweiliurobot">Xiaowei Liu</a>
     ,
     <a href="https://teacher.gdut.edu.cn/xuyong/zh_CN/index.htm">Yong Xu</a>
     ,
