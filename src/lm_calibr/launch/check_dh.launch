@@ -1,7 +1,7 @@
 <launch>
     <rosparam command="load" file="$(find lm_calibr)/config/calib.yaml" />
 
-    <node pkg="lm_calibr"  type="check_dh_node"  name="check_dh_node"  output="screen" clear_params="true" required="true">
+    <node pkg="lm_calibr"  type="check_dh_node"  name="check_dh_node"  output="screen" clear_params="true">
     </node>
     
 </launch>

@@ -53,6 +53,8 @@ EVA-LIO achieves high localization accuracy while maintaining computational effi
 
 ## 📦 Setup
 
+**If you want to use the ROS 2 version, please switch to the [ros2](https://github.com/zijiechenrobotics/lm_calibr/tree/ros2) branch.**
+
 ### Build from Docker
 
 ```bash

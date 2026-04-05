@@ -1,6 +1,6 @@
 # LM-Calibr Guide
 
-To facilitate testing, we provide datasets for both simulated and real-world scenarios ([Baidu Netdisk](https://pan.baidu.com/s/1AXkBc2mzLp5he0id93DUTg?pwd=7a8v)). Please place the downloaded datasets into the `lm_calibr/data` directory.
+To facilitate testing, we provide datasets for both simulated and real-world scenarios ([Baidu Netdisk](https://pan.baidu.com/s/1hZgSJ6Y6L0QfLroh_AOyRg?pwd=yncu)). Please place the downloaded datasets into the `lm_calibr/data` directory.
 
 
 

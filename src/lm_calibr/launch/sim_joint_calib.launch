@@ -1,7 +1,7 @@
 <launch>
     <rosparam command="load" file="$(find lm_calibr)/config/sim_joint_calib.yaml" />
 
-    <node pkg="lm_calibr"  type="sim_calib_node"  name="sim_calib_node"  output="screen" clear_params="true" required="true">
+    <node pkg="lm_calibr"  type="sim_calib_node"  name="sim_calib_node"  output="screen" clear_params="true">
     </node>
     
 </launch>
