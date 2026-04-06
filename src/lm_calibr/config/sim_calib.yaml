@@ -34,9 +34,9 @@ gt_extrinsic:
   phi_2: 0.0
 
 bag_path:
-  - "/root/workspace/data/calib_mid360_ntu.bag"
-  # - "/root/workspace/data/calib_mid360_cave.bag"
-  # - "/root/workspace/data/calib_mid360_bg.bag"
+  - "/root/workspace/data/calib_mid360_ntu"
+  # - "/root/workspace/data/calib_mid360_cave"
+  # - "/root/workspace/data/calib_mid360_bg"
 
 # # for Non-Omni LiDAR
 # DH_type: 1 
@@ -50,9 +50,9 @@ bag_path:
 #   phi_2: -1.57079633
 
 # bag_path:
-#   - "/root/workspace/data/calib_avia_ntu.bag"
-#   # - "/root/workspace/data/calib_avia_cave.bag"
-#   # - "/root/workspace/data/calib_avia_bg.bag"
+#   - "/root/workspace/data/calib_avia_ntu"
+#   # - "/root/workspace/data/calib_avia_cave"
+#   # - "/root/workspace/data/calib_avia_bg"
 
 
 

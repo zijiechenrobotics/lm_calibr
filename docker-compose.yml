@@ -1,12 +1,13 @@
 version: '3.4'
 services:
-  lm-calibr-workspace:
+  lm-calibr-humble-workspace:
     privileged: true
+    container_name: lm-calibr-humble-container
     build:
       context: .
-    image: lm-calibr-workspace
+    image: lm-calibr-humble-workspace
     environment:
-      - DISPLAY=:1.0
+      - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - NVIDIA_DRIVER_CAPABILITIES=all
       - NVIDIA_VISIBLE_DEVICES=all

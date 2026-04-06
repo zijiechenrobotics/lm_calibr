@@ -1,8 +1,0 @@
-<launch>
-  
-    <node pkg="lm_calibr"  type="transform_cloud_node"  name="transform_cloud_node"  
-      output="screen" clear_params="true" required="true">
-      <rosparam command="load" file="$(find lm_calibr)/config/transform_cloud.yaml" />
-    </node>
-    
-</launch>

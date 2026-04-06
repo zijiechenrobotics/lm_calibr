@@ -71,7 +71,7 @@ enum OctreeNodeState { UNKNOWN = 0, MID_NODE, PLANE };
 class OctreeNode {
  public:
   struct Config {
-    std::vector<float> eigen_threshold = {0.2, 0.1, 0.1};
+    std::vector<double> eigen_threshold = {0.2, 0.1, 0.1};
     size_t max_layer = 2;
   };
 

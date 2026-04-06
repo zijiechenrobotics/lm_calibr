@@ -74,7 +74,7 @@ class Timer {
 class Logger {
  public:
   struct Config {
-    Config(){};
+    Config() {};
 
     bool colorlogtostderr = true;
     int logbufsecs = 0;
@@ -86,7 +86,9 @@ class Logger {
 
   Logger(int argc, char** argv, Config config = Config());
 
-  Logger(int argc, char** argv, std::string current_path,
+  Logger(int argc,
+         char** argv,
+         std::string current_path,
          Config config = Config());
 
   ~Logger();

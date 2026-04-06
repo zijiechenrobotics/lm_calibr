@@ -1,51 +1,77 @@
 #include <development_tools/tools.h>
 
+#include <filesystem>
+#include <memory>
+#include <random>
+
+#include "ament_index_cpp/get_package_share_directory.hpp"
 #include "lm_calibr/rotation_lidar_calibration.h"
+#include "rclcpp/rclcpp.hpp"
 
 dev_tools::Timer timer;
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "sim_calib_node");
-  ros::NodeHandle nh;
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<rclcpp::Node>("sim_calib_node");
 
+  std::string package_path =
+      ament_index_cpp::get_package_share_directory("lm_calibr");
   dev_tools::Logger::Config logger_config;
   logger_config.log_prefix = false;
-  std::string package_path = ros::package::getPath("lm_calibr");
-  dev_tools::Logger logger(argc, argv, package_path, logger_config);
+  auto nonros_args = rclcpp::remove_ros_arguments(argc, argv);
+  std::vector<char*> logger_argv;
+  logger_argv.reserve(nonros_args.size());
+  for (auto& arg : nonros_args) {
+    logger_argv.push_back(arg.data());
+  }
+  dev_tools::Logger logger(static_cast<int>(logger_argv.size()),
+                           logger_argv.data(),
+                           package_path,
+                           logger_config);
 
-  std::string cloud_topic;
-  nh.param<std::string>("/lidar_topic", cloud_topic, "/cloud");
-  std::string encoder_topic;
-  nh.param<std::string>("/encoder_topic", encoder_topic, "/encoder");
+  node->declare_parameter<std::string>("lidar_topic", "/cloud");
+  node->declare_parameter<std::string>("encoder_topic", "/encoder");
+  node->declare_parameter<int>("random_seed", 0);
+  node->declare_parameter<int>("max_iter", 50);
+  node->declare_parameter<double>("downsample_size", 0.1);
+  node->declare_parameter<double>("max_voxel_size", 1.0);
+  node->declare_parameter<int>("max_layer", 2);
+  node->declare_parameter<std::vector<double>>("eigen_threshold");
+  node->declare_parameter<double>("rosbag_skip", 0.0);
+  node->declare_parameter<double>("angle_threshold", 0.0);
+  node->declare_parameter<std::vector<std::string>>("bag_path");
+  node->declare_parameter<int>("DH_type", 0);
+  node->declare_parameter<double>("gt_extrinsic.d_1", 0.0);
+  node->declare_parameter<double>("gt_extrinsic.a_1", 0.0);
+  node->declare_parameter<double>("gt_extrinsic.phi_1", 0.0);
+  node->declare_parameter<double>("gt_extrinsic.theta_2", 0.0);
+  node->declare_parameter<double>("gt_extrinsic.d_2", 0.0);
+  node->declare_parameter<double>("gt_extrinsic.a_2", 0.0);
+  node->declare_parameter<double>("gt_extrinsic.phi_2", 0.0);
+
+  std::string cloud_topic = node->get_parameter("lidar_topic").as_string();
+  std::string encoder_topic = node->get_parameter("encoder_topic").as_string();
   LOG(INFO) << "encoder_topic: " << encoder_topic << std::endl;
   LOG(INFO) << "cloud_topic: " << cloud_topic << std::endl;
 
-  int tseed = 0;
-  nh.param<int>("/random_seed", tseed, 0);
+  int tseed = node->get_parameter("random_seed").as_int();
 
-  int max_iter;
-  nh.param<int>("max_iter", max_iter, 50);
-  double downsample_size;
-  nh.param<double>("downsample_size", downsample_size, 0.1);
-  double max_voxel_size;
-  nh.param<double>("max_voxel_size", max_voxel_size, 1.0);
-  int max_layer;
-  nh.param<int>("max_layer", max_layer, 2);
-  std::vector<float> eigen_threshold;
-  nh.param<std::vector<float>>(
-      "eigen_threshold", eigen_threshold, std::vector<float>());
+  int max_iter = node->get_parameter("max_iter").as_int();
+  double downsample_size = node->get_parameter("downsample_size").as_double();
+  double max_voxel_size = node->get_parameter("max_voxel_size").as_double();
+  int max_layer = node->get_parameter("max_layer").as_int();
+  ;
+  std::vector<double> eigen_threshold =
+      node->get_parameter("eigen_threshold").as_double_array();
   if (eigen_threshold.size() != static_cast<size_t>(max_layer + 1)) {
     LOG(ERROR) << "eigen_threshold.size() != max_layer + 1" << std::endl;
     exit(0);
   }
-  double rosbag_skip;
-  nh.param<double>("rosbag_skip", rosbag_skip, 0.0);
-  double angle_threshold;
-  nh.param<double>("angle_threshold", angle_threshold, 0.0);
+  double rosbag_skip = node->get_parameter("rosbag_skip").as_double();
+  double angle_threshold = node->get_parameter("angle_threshold").as_double();
 
-  std::vector<std::string> bag_path_array;
-  nh.param<std::vector<std::string>>(
-      "bag_path", bag_path_array, std::vector<std::string>());
+  std::vector<std::string> bag_path_array =
+      node->get_parameter("bag_path").as_string_array();
   if (bag_path_array.empty()) {
     LOG(ERROR) << "bag_path_array is empty, force exit" << std::endl;
     exit(0);
@@ -55,18 +81,17 @@ int main(int argc, char** argv) {
     LOG(INFO) << "\t" << path << std::endl;
   }
 
-  int DH_type = 0;
-  nh.param<int>("DH_type", DH_type, 0);
+  int DH_type = node->get_parameter("DH_type").as_int();
   LOG(INFO) << "DH_type: " << DH_type;
 
   RotationLidarCalibration::ExtrinsicParam gt_ext;
-  nh.param<double>("gt_extrinsic/d_1", gt_ext.d_1, 0.0);
-  nh.param<double>("gt_extrinsic/a_1", gt_ext.a_1, 0.0);
-  nh.param<double>("gt_extrinsic/phi_1", gt_ext.phi_1, 0.0);
-  nh.param<double>("gt_extrinsic/theta_2", gt_ext.theta_2, 0.0);
-  nh.param<double>("gt_extrinsic/d_2", gt_ext.d_2, 0.0);
-  nh.param<double>("gt_extrinsic/a_2", gt_ext.a_2, 0.0);
-  nh.param<double>("gt_extrinsic/phi_2", gt_ext.phi_2, 0.0);
+  node->get_parameter("gt_extrinsic.d_1", gt_ext.d_1);
+  node->get_parameter("gt_extrinsic.a_1", gt_ext.a_1);
+  node->get_parameter("gt_extrinsic.phi_1", gt_ext.phi_1);
+  node->get_parameter("gt_extrinsic.theta_2", gt_ext.theta_2);
+  node->get_parameter("gt_extrinsic.d_2", gt_ext.d_2);
+  node->get_parameter("gt_extrinsic.a_2", gt_ext.a_2);
+  node->get_parameter("gt_extrinsic.phi_2", gt_ext.phi_2);
   LOG(INFO) << "gt_extrinsic" << std::endl
             << "\td_1: " << gt_ext.d_1 << std::endl
             << "\ta_1: " << gt_ext.a_1 << std::endl
@@ -152,6 +177,7 @@ int main(int argc, char** argv) {
   config.eigen_threshold = eigen_threshold;
   config.DH_type = DH_type;
   config.angle_threshold = angle_threshold;
+  config.rosbag_skip = rosbag_skip;
   RotationLidarCalibration calib(config);
 
   std::string database_path = package_path + "/result/calib_database";

@@ -1,26 +1,28 @@
 #pragma once
 
 #include <glog/logging.h>
-#include <livox_ros_driver/CustomMsg.h>
-#include <livox_ros_driver/CustomPoint.h>
 #include <pcl/common/io.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/JointState.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <tbb/global_control.h>
 #include <tbb/parallel_reduce.h>
 #include <yaml-cpp/yaml.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <deque>
 #include <filesystem>
+#include <livox_ros_driver2/msg/custom_msg.hpp>
+#include <livox_ros_driver2/msg/custom_point.hpp>
 #include <memory>
+#include <rclcpp/serialization.hpp>
+#include <rclcpp/serialized_message.hpp>
+#include <rosbag2_cpp/reader.hpp>
+#include <rosbag2_storage/serialized_bag_message.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sophus/so3.hpp>
 #include <unordered_map>
 #include <vector>
@@ -48,7 +50,7 @@ class RotationLidarCalibration {
   struct Config {
     size_t max_iter = 50;
     float max_voxel_size = 1.0;
-    std::vector<float> eigen_threshold = {0.1, 0.1, 0.1};
+    std::vector<double> eigen_threshold = {0.1, 0.1, 0.1};
     size_t max_layer = 2;
     double downsample_size = 0.1;
 
@@ -147,11 +149,13 @@ class RotationLidarCalibration {
                       const std::string& encoder_topic,
                       const std::string& save_path);
 
-  void ProcessSimCloud(const sensor_msgs::PointCloud2::ConstPtr& cloud_ptr,
-                       CloudMsg& cloud_msg);
+  void ProcessSimCloud(
+      const sensor_msgs::msg::PointCloud2::SharedPtr& cloud_ptr,
+      CloudMsg& cloud_msg);
 
-  void ProcessLivoxCloud(const livox_ros_driver::CustomMsg::ConstPtr& msg_ptr,
-                         CloudMsg& cloud_msg);
+  void ProcessLivoxCloud(
+      const livox_ros_driver2::msg::CustomMsg::SharedPtr& msg_ptr,
+      CloudMsg& cloud_msg);
 
   bool ComputeAlignRotation(
       const std::vector<std::shared_ptr<Point>>& point_array,

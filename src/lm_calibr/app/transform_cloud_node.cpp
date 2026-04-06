@@ -1,10 +1,11 @@
 #include <development_tools/tools.h>
-#include <ros/ros.h>
+#include <signal.h>
 
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <mutex>
+#include <rclcpp/rclcpp.hpp>
 
 #include "lm_calibr/rotation_lidar_calibration.h"
-#include "signal.h"
 
 Eigen::Matrix3d R_x_phi_1 = Eigen::Matrix3d::Identity();
 Eigen::Matrix3d R_z_theta_2 = Eigen::Matrix3d::Identity();
@@ -15,7 +16,7 @@ double time_offset = 0.0;
 
 struct LivoxMsg {
   double timestamp = 0.0;
-  livox_ros_driver::CustomMsg::Ptr livox_cloud_ptr = nullptr;
+  livox_ros_driver2::msg::CustomMsg::SharedPtr livox_cloud_ptr = nullptr;
 };
 
 std::deque<std::shared_ptr<LivoxMsg>> cloud_array;
@@ -25,15 +26,21 @@ std::mutex array_mutex;
 
 double lidar_sample_time = 1.0 / 10.0;
 
-ros::Publisher calibrated_cloud_pub;
-ros::Publisher calibrated_livox_pub;
+rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
+    calibrated_cloud_pub;
+rclcpp::Publisher<livox_ros_driver2::msg::CustomMsg>::SharedPtr
+    calibrated_livox_pub;
 
-void LivoxCallback(const livox_ros_driver::CustomMsg::ConstPtr& msg_ptr) {
+void LivoxCallback(
+    const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr msg_ptr) {
+  // LOG(INFO) << "LivoxCallback";
   static double last_timestamp = 0.0;
+
   std::shared_ptr<LivoxMsg> cloud_msg_ptr(new LivoxMsg());
-  cloud_msg_ptr->livox_cloud_ptr.reset(
-      new livox_ros_driver::CustomMsg(*msg_ptr));
-  cloud_msg_ptr->timestamp = msg_ptr->header.stamp.toSec();
+  cloud_msg_ptr->livox_cloud_ptr =
+      std::make_shared<livox_ros_driver2::msg::CustomMsg>(*msg_ptr);
+
+  cloud_msg_ptr->timestamp = rclcpp::Time(msg_ptr->header.stamp).seconds();
 
   std::sort(cloud_msg_ptr->livox_cloud_ptr->points.begin(),
             cloud_msg_ptr->livox_cloud_ptr->points.end(),
@@ -54,12 +61,16 @@ void LivoxCallback(const livox_ros_driver::CustomMsg::ConstPtr& msg_ptr) {
   }
 }
 
-void EncoderCallback(const sensor_msgs::JointState::ConstPtr& msg_ptr) {
+void EncoderCallback(
+    const sensor_msgs::msg::JointState::ConstSharedPtr msg_ptr) {
+  // LOG(INFO) << "EncoderCallback";
   static double last_timestamp = 0.0;
+
   std::shared_ptr<EncoderMsg> encoder_msg_ptr(new EncoderMsg());
   encoder_msg_ptr->angle = msg_ptr->position[0];
   encoder_msg_ptr->angle_vel = msg_ptr->velocity[0];
-  encoder_msg_ptr->timestamp = msg_ptr->header.stamp.toSec() + time_offset;
+  encoder_msg_ptr->timestamp =
+      rclcpp::Time(msg_ptr->header.stamp).seconds() + time_offset;
 
   {
     std::lock_guard<std::mutex> lock(array_mutex);
@@ -87,7 +98,6 @@ bool SyncMsg() {
   if (cloud_array.front()->timestamp < encoder_array.front()->timestamp) {
     std::lock_guard<std::mutex> lock(array_mutex);
     cloud_array.pop_front();
-
     return false;
   }
 
@@ -106,11 +116,12 @@ void Process() {
 
   pcl::PointCloud<PointType>::Ptr calibrated_cloud_ptr(
       new pcl::PointCloud<PointType>());
-  livox_ros_driver::CustomMsg calibrated_livox_msg;
+  livox_ros_driver2::msg::CustomMsg calibrated_livox_msg;
 
   size_t i = 0;
   PointType pt;
-  livox_ros_driver::CustomPoint calibrated_livox_pt;
+  livox_ros_driver2::msg::CustomPoint calibrated_livox_pt;
+
   for (auto& livox_pt : cloud_msg_ptr->livox_cloud_ptr->points) {
     double pt_time = cloud_msg_timestamp + livox_pt.offset_time * 1e-9;
 
@@ -127,8 +138,10 @@ void Process() {
           Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
       Eigen::Matrix3d R_B_L = R_z_theta_1 * R_x_phi_1 * R_z_theta_2 * R_x_phi_2;
+
       Eigen::Vector3d t_B_L =
           R_z_theta_1 * R_x_phi_1 * R_z_theta_2 * t_1 + R_z_theta_1 * t_2;
+
       Eigen::Vector3d p_L(livox_pt.x, livox_pt.y, livox_pt.z);
       Eigen::Vector3d p_B = R_B_L * p_L + t_B_L;
 
@@ -143,6 +156,7 @@ void Process() {
       calibrated_livox_pt.y = p_B.y();
       calibrated_livox_pt.z = p_B.z();
       calibrated_livox_msg.points.push_back(calibrated_livox_pt);
+
     } else if (pt_time > encoder_array[i + 1]->timestamp) {
       i++;
       if (i + 1 >= encoder_array.size()) {
@@ -153,53 +167,78 @@ void Process() {
 
   LOG(INFO) << "pulish: " << calibrated_cloud_ptr->points.size() << std::endl;
 
-  ros::Time timestamp(cloud_msg_timestamp);
+  rclcpp::Time timestamp(cloud_msg_timestamp * 1e9);
 
-  sensor_msgs::PointCloud2 calibrated_cloud_msg;
+  sensor_msgs::msg::PointCloud2 calibrated_cloud_msg;
   pcl::toROSMsg(*calibrated_cloud_ptr, calibrated_cloud_msg);
   calibrated_cloud_msg.header.frame_id = "world";
   calibrated_cloud_msg.header.stamp = timestamp;
-  calibrated_cloud_pub.publish(calibrated_cloud_msg);
+
+  calibrated_cloud_pub->publish(calibrated_cloud_msg);
 
   calibrated_livox_msg.header = cloud_msg_ptr->livox_cloud_ptr->header;
   calibrated_livox_msg.lidar_id = cloud_msg_ptr->livox_cloud_ptr->lidar_id;
   calibrated_livox_msg.point_num = calibrated_livox_msg.points.size();
   calibrated_livox_msg.timebase = cloud_msg_ptr->livox_cloud_ptr->timebase;
-  calibrated_livox_pub.publish(calibrated_livox_msg);
+
+  calibrated_livox_pub->publish(calibrated_livox_msg);
 
   cloud_array.pop_front();
 }
 
 bool flag_exit = false;
+
 void SigHandle(int sig) {
   flag_exit = true;
-  ROS_WARN("catch sig %d", sig);
+  RCLCPP_WARN(rclcpp::get_logger("transform_cloud_node"), "catch sig %d", sig);
 }
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "transform_cloud_node");
-  ros::NodeHandle nh("~");
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<rclcpp::Node>("transform_cloud_node");
 
+  std::string package_path =
+      ament_index_cpp::get_package_share_directory("lm_calibr");
   dev_tools::Logger::Config logger_config;
   logger_config.log_prefix = false;
-  std::string package_path = ros::package::getPath("lm_calibr");
-  dev_tools::Logger logger(argc, argv, package_path, logger_config);
+  auto nonros_args = rclcpp::remove_ros_arguments(argc, argv);
+  std::vector<char*> logger_argv;
+  logger_argv.reserve(nonros_args.size());
+  for (auto& arg : nonros_args) {
+    logger_argv.push_back(arg.data());
+  }
+  dev_tools::Logger logger(static_cast<int>(logger_argv.size()),
+                           logger_argv.data(),
+                           package_path,
+                           logger_config);
 
-  // load param
   std::string lidar_topic, encoder_topic;
-  nh.param<std::string>("lidar_topic", lidar_topic, std::string(""));
-  nh.param<std::string>("encoder_topic", encoder_topic, std::string(""));
 
-  nh.param<double>("time_offset", time_offset, 0.0);
+  node->declare_parameter("lidar_topic", std::string(""));
+  node->declare_parameter("encoder_topic", std::string(""));
+  node->declare_parameter("time_offset", 0.0);
+
+  node->get_parameter("lidar_topic", lidar_topic);
+  node->get_parameter("encoder_topic", encoder_topic);
+  node->get_parameter("time_offset", time_offset);
 
   double d_1, a_1, phi_1, theta_2, d_2, a_2, phi_2;
-  nh.param<double>("extrinsic/d_1", d_1, 0.0);
-  nh.param<double>("extrinsic/a_1", a_1, 0.0);
-  nh.param<double>("extrinsic/phi_1", phi_1, 0.0);
-  nh.param<double>("extrinsic/theta_2", theta_2, 0.0);
-  nh.param<double>("extrinsic/d_2", d_2, 0.0);
-  nh.param<double>("extrinsic/a_2", a_2, 0.0);
-  nh.param<double>("extrinsic/phi_2", phi_2, 0.0);
+
+  node->declare_parameter("extrinsic.d_1", 0.0);
+  node->declare_parameter("extrinsic.a_1", 0.0);
+  node->declare_parameter("extrinsic.phi_1", 0.0);
+  node->declare_parameter("extrinsic.theta_2", 0.0);
+  node->declare_parameter("extrinsic.d_2", 0.0);
+  node->declare_parameter("extrinsic.a_2", 0.0);
+  node->declare_parameter("extrinsic.phi_2", 0.0);
+
+  node->get_parameter("extrinsic.d_1", d_1);
+  node->get_parameter("extrinsic.a_1", a_1);
+  node->get_parameter("extrinsic.phi_1", phi_1);
+  node->get_parameter("extrinsic.theta_2", theta_2);
+  node->get_parameter("extrinsic.d_2", d_2);
+  node->get_parameter("extrinsic.a_2", a_2);
+  node->get_parameter("extrinsic.phi_2", phi_2);
 
   LOG(INFO) << "[transform_cloud_node] param: " << std::endl
             << "\tlidar_topic: " << lidar_topic << std::endl
@@ -222,23 +261,29 @@ int main(int argc, char** argv) {
   t_2 = Eigen::Vector3d(a_1, 0.0, d_1);
   t_1 = Eigen::Vector3d(a_2, 0.0, d_2);
 
-  ros::Subscriber cloub_sub = nh.subscribe(lidar_topic, 1000000, LivoxCallback);
-  ros::Subscriber encoder_sub =
-      nh.subscribe(encoder_topic, 1000000, EncoderCallback);
+  auto cloub_sub = node->create_subscription<livox_ros_driver2::msg::CustomMsg>(
+      lidar_topic, 1000000, LivoxCallback);
 
-  calibrated_cloud_pub =
-      nh.advertise<sensor_msgs::PointCloud2>("/calibrated_cloud", 10000);
+  auto encoder_sub = node->create_subscription<sensor_msgs::msg::JointState>(
+      encoder_topic, 1000000, EncoderCallback);
+
+  calibrated_cloud_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "/calibrated_cloud", 10000);
+
   calibrated_livox_pub =
-      nh.advertise<livox_ros_driver::CustomMsg>("/calibrated_livox", 10000);
+      node->create_publisher<livox_ros_driver2::msg::CustomMsg>(
+          "/calibrated_livox", 10000);
 
   signal(SIGINT, SigHandle);
-  ros::Rate rate(5000);
-  while (ros::ok()) {
+
+  rclcpp::Rate rate(5000);
+
+  while (rclcpp::ok()) {
     if (flag_exit) {
       break;
     }
 
-    ros::spinOnce();
+    rclcpp::spin_some(node);
 
     if (SyncMsg()) {
       Process();
@@ -246,4 +291,7 @@ int main(int argc, char** argv) {
 
     rate.sleep();
   }
+
+  rclcpp::shutdown();
+  return 0;
 }

@@ -1,9 +1,14 @@
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <rclcpp/rclcpp.hpp>
+
 #include "lm_calibr/rotation_lidar_calibration.h"
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "test_sim_rosbag_node");
-  ros::NodeHandle nh;
-  std::string package_path = ros::package::getPath("lm_calibr");
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<rclcpp::Node>("test_sim_rosbag_node");
+
+  std::string package_path =
+      ament_index_cpp::get_package_share_directory("lm_calibr");
 
   double d_1 = 0.0;
   double a_1 = 0.0;
@@ -12,27 +17,42 @@ int main(int argc, char** argv) {
   double d_2 = 0.0;
   double a_2 = 0.0;
   double phi_2 = 0.0;
-  nh.param<double>("init_extrinsic/d_1", d_1, 0.0);
-  nh.param<double>("init_extrinsic/a_1", a_1, 0.0);
-  nh.param<double>("init_extrinsic/phi_1", phi_1, 0.0);
-  nh.param<double>("init_extrinsic/theta_2", theta_2, 0.0);
-  nh.param<double>("init_extrinsic/d_2", d_2, 0.0);
-  nh.param<double>("init_extrinsic/a_2", a_2, 0.0);
-  nh.param<double>("init_extrinsic/phi_2", phi_2, 0.0);
+
+  node->declare_parameter("init_extrinsic.d_1", 0.0);
+  node->declare_parameter("init_extrinsic.a_1", 0.0);
+  node->declare_parameter("init_extrinsic.phi_1", 0.0);
+  node->declare_parameter("init_extrinsic.theta_2", 0.0);
+  node->declare_parameter("init_extrinsic.d_2", 0.0);
+  node->declare_parameter("init_extrinsic.a_2", 0.0);
+  node->declare_parameter("init_extrinsic.phi_2", 0.0);
+
+  node->get_parameter("init_extrinsic.d_1", d_1);
+  node->get_parameter("init_extrinsic.a_1", a_1);
+  node->get_parameter("init_extrinsic.phi_1", phi_1);
+  node->get_parameter("init_extrinsic.theta_2", theta_2);
+  node->get_parameter("init_extrinsic.d_2", d_2);
+  node->get_parameter("init_extrinsic.a_2", a_2);
+  node->get_parameter("init_extrinsic.phi_2", phi_2);
 
   std::vector<std::string> tmp_bag_path_array;
-  nh.param<std::vector<std::string>>(
-      "bag_path", tmp_bag_path_array, std::vector<std::string>());
+  node->declare_parameter<std::vector<std::string>>("bag_path",
+                                                    std::vector<std::string>());
+  node->get_parameter("bag_path", tmp_bag_path_array);
+
   if (tmp_bag_path_array.empty()) {
     LOG(ERROR) << "tmp_bag_path_array is empty";
     exit(0);
   }
+
   std::string rosbag_path = tmp_bag_path_array[0];
 
   double rosbag_skip = 0.0;
-  nh.param<double>("rosbag_skip", rosbag_skip, 0.0);
+  node->declare_parameter("rosbag_skip", 0.0);
+  node->get_parameter("rosbag_skip", rosbag_skip);
+
   double angle_threshold = 0.0;
-  nh.param<double>("angle_threshold", angle_threshold, 0.0);
+  node->declare_parameter("angle_threshold", 0.0);
+  node->get_parameter("angle_threshold", angle_threshold);
 
   pcl::PointCloud<PointType>::Ptr encoder_map(new pcl::PointCloud<PointType>());
 
@@ -58,6 +78,7 @@ int main(int argc, char** argv) {
   std::vector<std::string> bag_path_array = {rosbag_path};
   std::filesystem::remove_all(database_path);
   std::filesystem::create_directories(database_path);
+
   calib.ProcessRosbags(bag_path_array,
                        "/livox/lidar",
                        LidarType::LIVOX,
@@ -91,5 +112,6 @@ int main(int argc, char** argv) {
   pcl::io::savePCDFileASCII(encoder_map_path, *encoder_map);
   std::cout << "save in: " << encoder_map_path << std::endl;
 
+  rclcpp::shutdown();
   return 0;
 }

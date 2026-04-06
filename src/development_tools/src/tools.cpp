@@ -27,7 +27,8 @@ void Timer::PrintAll() {
   std::cout << ">>> ===== Printing run time =====" << std::endl;
   for (const auto& r : records_) {
     double time_temp = std::accumulate(r.second.time_usage_in_ms_.begin(),
-                                       r.second.time_usage_in_ms_.end(), 0.0) /
+                                       r.second.time_usage_in_ms_.end(),
+                                       0.0) /
                        double(r.second.time_usage_in_ms_.size());
     auto max_iter = std::max_element(r.second.time_usage_in_ms_.begin(),
                                      r.second.time_usage_in_ms_.end());

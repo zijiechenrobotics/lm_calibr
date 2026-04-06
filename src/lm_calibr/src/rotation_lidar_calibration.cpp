@@ -565,45 +565,57 @@ bool RotationLidarCalibration::ProcessRosbags(
     const LidarType lidar_type,
     const std::string& encoder_topic,
     const std::string& save_path) {
+  LOG(INFO) << "ProcessRosbags, bag.size(): " << bag_path_array.size();
   for (size_t i = 0; i < bag_path_array.size(); ++i) {
-    std::vector<std::string> topics = {encoder_topic, cloud_topic};
-    rosbag::Bag bag;
-    bag.open(bag_path_array[i], rosbag::bagmode::Read);
-    rosbag::View view(bag, rosbag::TopicQuery(topics));
+    LOG(INFO) << "open ros2 bag path: " << bag_path_array[i];
+    rosbag2_cpp::Reader reader;
+    reader.open(bag_path_array[i]);
 
-    // extract raw cloud and encoder data from rosbag
     std::deque<EncoderMsg> encoder_msg_array;
     std::deque<CloudMsg> cloud_msg_array;
-    for (const rosbag::MessageInstance& m : view) {
-      if (m.getTopic() == encoder_topic) {
-        sensor_msgs::JointState::ConstPtr encoder_ptr =
-            m.instantiate<sensor_msgs::JointState>();
+
+    rclcpp::Serialization<sensor_msgs::msg::JointState> joint_serializer;
+    rclcpp::Serialization<sensor_msgs::msg::PointCloud2> cloud_serializer;
+    rclcpp::Serialization<livox_ros_driver2::msg::CustomMsg> livox_serializer;
+
+    while (reader.has_next()) {
+      auto bag_msg = reader.read_next();
+
+      const std::string topic_name = bag_msg->topic_name;
+
+      rclcpp::SerializedMessage serialized_msg(*bag_msg->serialized_data);
+
+      if (topic_name == encoder_topic) {
+        sensor_msgs::msg::JointState msg;
+        joint_serializer.deserialize_message(&serialized_msg, &msg);
 
         EncoderMsg encoder_msg;
-        encoder_msg.angle = encoder_ptr->position[0];
-        encoder_msg.angle_vel = encoder_ptr->velocity[0];
-        encoder_msg.timestamp = encoder_ptr->header.stamp.toSec();
+        encoder_msg.angle = msg.position[0];
+        encoder_msg.angle_vel = msg.velocity[0];
+        encoder_msg.timestamp = rclcpp::Time(msg.header.stamp).seconds();
 
         encoder_msg_array.push_back(encoder_msg);
-      } else if (m.getTopic() == cloud_topic) {
+      }
+
+      else if (topic_name == cloud_topic) {
         CloudMsg cloud_msg;
-        switch (lidar_type) {
-        case LidarType::SIM: {
-          sensor_msgs::PointCloud2::ConstPtr msg_ptr =
-              m.instantiate<sensor_msgs::PointCloud2>();
+
+        if (lidar_type == LidarType::SIM) {
+          sensor_msgs::msg::PointCloud2 msg;
+          cloud_serializer.deserialize_message(&serialized_msg, &msg);
+
+          auto msg_ptr = std::make_shared<sensor_msgs::msg::PointCloud2>(msg);
           ProcessSimCloud(msg_ptr, cloud_msg);
-          break;
-        }
-        case LidarType::LIVOX: {
-          livox_ros_driver::CustomMsg::ConstPtr msg_ptr =
-              m.instantiate<livox_ros_driver::CustomMsg>();
+        } else if (lidar_type == LidarType::LIVOX) {
+          livox_ros_driver2::msg::CustomMsg msg;
+          livox_serializer.deserialize_message(&serialized_msg, &msg);
+
+          auto msg_ptr =
+              std::make_shared<livox_ros_driver2::msg::CustomMsg>(msg);
           ProcessLivoxCloud(msg_ptr, cloud_msg);
-          break;
-        }
-        default: {
-          LOG(ERROR) << "error lidar type" << std::endl;
+        } else {
+          LOG(ERROR) << "error lidar type";
           return false;
-        }
         }
 
         cloud_msg_array.push_back(cloud_msg);
@@ -749,9 +761,10 @@ bool RotationLidarCalibration::ProcessRosbags(
 }
 
 void RotationLidarCalibration::ProcessSimCloud(
-    const sensor_msgs::PointCloud2::ConstPtr& cloud_msg_ptr,
+    const sensor_msgs::msg::PointCloud2::SharedPtr& cloud_msg_ptr,
     CloudMsg& cloud_msg) {
-  cloud_msg.timestamp = cloud_msg_ptr->header.stamp.toSec();
+  cloud_msg.timestamp = cloud_msg_ptr->header.stamp.sec +
+                        cloud_msg_ptr->header.stamp.nanosec * 1e-9;
   cloud_msg.cloud_ptr.reset(new pcl::PointCloud<PointType>());
 
   pcl::PointCloud<PointType>::Ptr cloud_ptr(new pcl::PointCloud<PointType>());
@@ -761,7 +774,8 @@ void RotationLidarCalibration::ProcessSimCloud(
 }
 
 void RotationLidarCalibration::ProcessLivoxCloud(
-    const livox_ros_driver::CustomMsg::ConstPtr& msg_ptr, CloudMsg& cloud_msg) {
+    const livox_ros_driver2::msg::CustomMsg::SharedPtr& msg_ptr,
+    CloudMsg& cloud_msg) {
   pcl::PointCloud<PointType>::Ptr cloud_ptr(new pcl::PointCloud<PointType>());
   for (size_t i = 1; i < msg_ptr->point_num; ++i) {
     if (((msg_ptr->points[i].tag & 0x30) == 0x10 ||
@@ -789,7 +803,8 @@ void RotationLidarCalibration::ProcessLivoxCloud(
     }
   }
 
-  cloud_msg.timestamp = msg_ptr->header.stamp.toSec();
+  cloud_msg.timestamp =
+      msg_ptr->header.stamp.sec + msg_ptr->header.stamp.nanosec * 1e-9;
   cloud_msg.cloud_ptr.reset(new pcl::PointCloud<PointType>());
   voxel_grid_ptr_->Filter(cloud_ptr, cloud_msg.cloud_ptr);
 }

@@ -1,32 +1,39 @@
 # LM-Calibr Guide
 
-To facilitate testing, we provide datasets for both simulated and real-world scenarios ([Baidu Netdisk](https://pan.baidu.com/s/1AXkBc2mzLp5he0id93DUTg?pwd=7a8v)). Please place the downloaded datasets into the `lm_calibr/data` directory.
+To facilitate testing, we provide datasets for both simulated and real-world scenarios ([Baidu Netdisk](https://pan.baidu.com/s/1hZgSJ6Y6L0QfLroh_AOyRg?pwd=yncu)). Please place the downloaded datasets into the `/root/workspace/data` directory.
 
+> [!NOTE]
+> The following commands all use the default workspace as `/root/workspace`. If you are not using Docker to start the application, please replace the workspace path accordingly.
 
+## 0. Compile
+```bash
+cd /root/workspace
+colcon build
+```
 
 ## 1. Calibration in Simulation
 
 ### 1.1. Single-Scene Calibration
 
 ```bash
-source devel/setup.bash
-roslaunch lm_calibr sim_calib.launch
+source install/setup.bash
+ros2 launch lm_calibr sim_calib.py
 ```
 
-* Configuration file: `lm_calibr/src/lm_calibr/config/sim_calib.yaml`
-* Calibration results: `lm_calibr/src/lm_calibr/result/calib_results`
+* Configuration file: `/root/workspace/src/lm_calibr/config/sim_calib.yaml`
+* Calibration results: `/root/workspace/install/lm_calibr/share/lm_calibr/result`
 
 ### 1.2. Multi-Scene Joint Calibration
 
 Joint calibration effectively prevents LM-Calibr from overfitting to a single scene, thereby significantly improving overall calibration accuracy.
 
 ```bash
-source devel/setup.bash
-roslaunch lm_calibr sim_joint_calib.launch
+source install/setup.bash 
+ros2 launch lm_calibr sim_joint_calib.py
 ```
 
-* Configuration file: `lm_calibr/src/lm_calibr/config/sim_joint_calib.yaml`
-* Calibration results: `lm_calibr/src/lm_calibr/result/calib_results`
+* Configuration file: `/root/workspace/src/lm_calibr/config/sim_joint_calib.yaml`
+* Calibration results: `/root/workspace/install/lm_calibr/share/lm_calibr/result`
 
 ## 2. Calibration in the Real World
 
@@ -35,11 +42,11 @@ roslaunch lm_calibr sim_joint_calib.launch
 LM-Calibr guarantees accuracy and convergence when **the initial angle error is less than 0.2 rad and the translation error is less than 0.2 m**. Therefore, before running the calibration, it is crucial to check whether the error of your initial guess is too large (i.e., whether the Denavit-Hartenberg (DH) parameters are completely incorrect). You can use the following script to verify this:
 
 ```bash
-source devel/setup.bash
+source install/setup.bash
 # Generate the uncalibrated point cloud
-roslaunch lm_calibr check_dh.launch
+ros2 launch lm_calibr check_dh.py
 # Visualize the uncalibrated point cloud
-pcl_viewer src/lm_calibr/result/encoder_cloud.pcd
+pcl_viewer install/lm_calibr/share/lm_calibr/result/encoder_cloud.pcd
 ```
 
 **Correct DH Parameters**
@@ -57,22 +64,22 @@ Conversely, as shown in the figure below, if the provided DH parameters are **co
 ### 2.2. Single-Scene Calibration
 
 ```bash
-source devel/setup.bash
-roslaunch lm_calibr calib.launch
+source install/setup.bash 
+ros2 launch lm_calibr calib.py
 ```
 
-* Configuration file: `lm_calibr/src/lm_calibr/config/calib.yaml`
-* Calibration results: `lm_calibr/src/lm_calibr/result/calib_results`
+* Configuration file: `/root/workspace/src/lm_calibr/config/calib.yaml`
+* Calibration results: `/root/workspace/install/lm_calibr/share/lm_calibr/result`
 
 ### 2.3. Multi-Scene Joint Calibration
 
 ```bash
-source devel/setup.bash
-roslaunch lm_calibr joint_calib.launch
+source install/setup.bash 
+ros2 launch lm_calibr joint_calib.py
 ```
 
-* Configuration file: `lm_calibr/src/lm_calibr/config/joint_calib.yaml`
-* Calibration results: `lm_calibr/src/lm_calibr/result/calib_results`
+* Configuration file: `/root/workspace/src/lm_calibr/config/joint_calib.yaml`
+* Calibration results: `/root/workspace/install/lm_calibr/share/lm_calibr/result`
 
 # 3. Transform Point Cloud from LiDAR Frame to Base Frame
 
@@ -81,6 +88,6 @@ After calibration, copy the calibration results from `calib_results/newest_calib
 This node subscribes to the `lidar_topic` and `encoder_topic`, and then publishes the transformed laser points in the base frame via the `/calibrated_livox` topic. This topic can be directly used as the LiDAR input for any LIO system (e.g., Fast-LIO2).
 
 ```bash
-source devel/setup.bash
-roslaunch lm_calibr transform_cloud.launch
+source install/setup.bash 
+ros2 launch lm_calibr transform_cloud.py
 ```

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 容器名称或ID
-CONTAINER_NAME_OR_ID="lm_calibr-lm-calibr-workspace-1"
+CONTAINER_NAME_OR_ID="lm-calibr-humble-container"
 
 # 检查容器是否正在运行
 if docker ps | grep -q $CONTAINER_NAME_OR_ID; then

@@ -35,10 +35,10 @@ init_extrinsic:
   phi_2: 0.0
 
 bag_path:
-  - "/root/workspace/data/calib_mid360_s1.bag"
-  # - "/root/workspace/data/calib_mid360_s2.bag"
-  # - "/root/workspace/data/calib_mid360_s3.bag"
-  # - "/root/workspace/data/calib_mid360_s4.bag"
+  - "/root/workspace/data/calib_mid360_s1"
+  # - "/root/workspace/data/calib_mid360_s2"
+  # - "/root/workspace/data/calib_mid360_s3"
+  # - "/root/workspace/data/calib_mid360_s4"
 
 # # for Non-Omni LiDAR
 # DH_type: 1
@@ -52,7 +52,7 @@ bag_path:
 #   phi_2: -0.2 # 0.0
 
 # bag_path:
-#   - "/root/workspace/data/calib_avia_s1.bag"
-#   # - "/root/workspace/data/calib_avia_s2.bag"
-#   # - "/root/workspace/data/calib_avia_s3.bag"
-#   # - "/root/workspace/data/calib_avia_s4.bag"
+#   - "/root/workspace/data/calib_avia_s1"
+#   # - "/root/workspace/data/calib_avia_s2"
+#   # - "/root/workspace/data/calib_avia_s3"
+#   # - "/root/workspace/data/calib_avia_s4"
